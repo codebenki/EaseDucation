@@ -1,69 +1,152 @@
-import { ThemedText } from "@/components/themed-text";
+import { ChatInput } from "@/components/chat/chat-input";
+import { MessageList } from "@/components/chat/message-list";
 import { ThemedView } from "@/components/themed-view";
 import { Input } from "@/components/ui/input";
-import { useColorScheme } from "@/hooks/use-color-scheme"; // Ensure this works for mobile
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useHeaderHeight } from "@react-navigation/elements";
 import React, { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+export type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  fileName?: string;
+};
 
 export default function Chat() {
   const colorScheme = useColorScheme() ?? "light";
-  const [inputHeight, setInputHeight] = useState(40);
+  const headerHeight = useHeaderHeight();
+  const insets = useSafeAreaInsets();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [serverIp, setServerIp] = useState("localhost");
 
-  // Mapping themes to static strings so NativeWind can compile them
   const themeClasses = {
     light: {
       container: "bg-white",
       text: "text-black",
       inputBg: "bg-gray-100",
+      border: "border-gray-200",
+      previewBg: "bg-gray-50",
     },
     dark: {
       container: "bg-zinc-950",
       text: "text-white",
       inputBg: "bg-zinc-900",
+      border: "border-zinc-800",
+      previewBg: "bg-zinc-900/50",
     },
   };
 
   const currentTheme = themeClasses[colorScheme];
 
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      // keyboardVerticalOffset={90} // Adjust this if the input is hidden by headers
-      className="flex-1"
-    >
-      <ThemedView className={`flex-1 ${currentTheme.container}`}>
-        {/* 1. Chat Message Area (Scrollable) */}
-        <ScrollView
-          className="flex-1 px-4"
-          contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}
-        >
-          <ThemedText className={`text-center py-10 ${currentTheme.text}`}>
-            Start a conversation
-          </ThemedText>
-        </ScrollView>
+  async function handleSendMessage({
+    formData,
+    message,
+    fileName,
+  }: {
+    formData: FormData;
+    message: string;
+    fileName?: string;
+  }) {
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: "user",
+      content: message,
+      fileName: fileName,
+    };
 
-        {/* 2. Input Area (Fixed to bottom) */}
-        <View className="p-4 border-t border-gray-200/10">
-          <Input
-            placeholder="Chat"
-            multiline={true}
-            textAlignVertical="top"
-            // Dynamic height logic
-            onContentSizeChange={(e) => {
-              const newHeight = e.nativeEvent.contentSize.height;
-              if (newHeight <= 100) {
-                setInputHeight(newHeight);
-              }
-            }}
-            style={{ height: Math.max(40, inputHeight) }}
-            // Styles
-            className={`w-full self-center rounded-2xl px-4 py-2 ${currentTheme.inputBg} ${currentTheme.text}`}
-            placeholderTextColor={
-              colorScheme === "dark" ? "#a1a1aa" : "#71717a"
-            }
+    setMessages((prev) => [...prev, userMessage]);
+    setIsLoading(true);
+
+    try {
+      const url = "http://" + serverIp + ":8010/chat";
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        body: formData,
+      });
+      const responseText = await response.text();
+      let responseData: {
+        answer?: string;
+        message?: string;
+        detail?: string;
+      } | null = null;
+
+      if (responseText) {
+        try {
+          responseData = JSON.parse(responseText);
+        } catch {
+          responseData = { answer: responseText };
+        }
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          responseData?.message ||
+            responseData?.detail ||
+            `Request failed with status ${response.status}`,
+        );
+      }
+
+      const aiMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: responseData?.answer ?? "No answer returned from the server.",
+      };
+
+      setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      console.error("Chat Error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <ThemedView className={`flex-1 ${currentTheme.container}`}>
+      <View className={`border-b px-4 pb-3 pt-3 ${currentTheme.border}`}>
+        <Text
+          className={`mb-2 text-xs uppercase tracking-[1px] opacity-60 ${currentTheme.text}`}
+        >
+          Server IP
+        </Text>
+        <Input
+          value={serverIp}
+          onChangeText={setServerIp}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType={Platform.OS === "ios" ? "url" : "default"}
+          placeholder="192.168.1.10:8010"
+          className={`rounded-2xl px-4 py-3 ${currentTheme.inputBg} ${currentTheme.text}`}
+          placeholderTextColor={colorScheme === "dark" ? "#71717a" : "#a1a1aa"}
+        />
+      </View>
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        className="flex-1"
+        keyboardVerticalOffset={
+          Platform.OS === "ios" ? headerHeight : insets.top
+        }
+      >
+        <MessageList
+          messages={messages}
+          isLoading={isLoading}
+          colorScheme={colorScheme}
+          theme={currentTheme}
+        />
+
+        <View style={{ paddingBottom: Math.max(insets.bottom, 8) }}>
+          <ChatInput
+            theme={currentTheme}
+            colorScheme={colorScheme}
+            onSend={handleSendMessage}
           />
         </View>
-      </ThemedView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </ThemedView>
   );
 }
