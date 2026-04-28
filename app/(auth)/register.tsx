@@ -10,12 +10,11 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useRouter } from "expo-router";
-import { Eye, UserRound } from "lucide-react-native";
+import { UserRound } from "lucide-react-native";
 import { useState } from "react";
 import { KeyboardAvoidingView, Pressable, View } from "react-native";
 
-export default function Login() {
+export default function Register() {
   const colorScheme = useColorScheme() ?? "light";
   const themeClasses = {
     light: {
@@ -36,18 +35,24 @@ export default function Login() {
   const currentTheme = themeClasses[colorScheme];
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [secureText, setSecureText] = useState(true);
-  const router = useRouter();
+  const [firstName, setFirstName] = useState("");
+  const [middleName, setMiddleName] = useState("");
+  const [lastName, setLastName] = useState("");
 
-  function signIn() {
-    console.log("test");
+  function register() {
     console.log(email);
     console.log(password);
+    console.log(firstName);
+    console.log(middleName);
+    console.log(lastName);
+
+    // insert supabase query
 
     setEmail("");
     setPassword("");
-
-    router.replace("/(tabs)/chat");
+    setFirstName("");
+    setMiddleName("");
+    setLastName("");
   }
 
   return (
@@ -84,39 +89,52 @@ export default function Login() {
               <Label htmlFor="password" className={`${currentTheme.text}`}>
                 Password
               </Label>
-              <View className="flex flex-row gap-2">
-                <Input
-                  id="password"
-                  value={password}
-                  secureTextEntry={secureText}
-                  onChangeText={(text) => setPassword(text)}
-                  placeholder="Password"
-                  className={`flex-1`}
-                />
-                <Pressable
-                  className={`${currentTheme.previewBg} ${currentTheme.text} ${currentTheme.border} border p-2 flex items-center justify-center rounded-md`}
-                  onPress={() => setSecureText(!secureText)}
-                >
-                  <Eye size={22}></Eye>
-                </Pressable>
-              </View>
+              <Input
+                id="password"
+                value={password}
+                onChangeText={(text) => setPassword(text)}
+                placeholder="Password"
+              />
+            </View>
+            <View className="gap-2">
+              <Label htmlFor="first_name" className={`${currentTheme.text}`}>
+                First Name
+              </Label>
+              <Input
+                id="first_name"
+                value={firstName}
+                onChangeText={(text) => setFirstName(text)}
+                placeholder="John"
+              />
+            </View>
+            <View className="gap-2">
+              <Label htmlFor="middle_name" className={`${currentTheme.text}`}>
+                Middle Name
+              </Label>
+              <Input
+                id="middle_name"
+                value={middleName}
+                onChangeText={(text) => setMiddleName(text)}
+                placeholder="Mike"
+              />
+            </View>
+            <View className="gap-2">
+              <Label htmlFor="last_name" className={`${currentTheme.text}`}>
+                Last Name
+              </Label>
+              <Input
+                id="last_name"
+                value={lastName}
+                onChangeText={(text) => setLastName(text)}
+                placeholder="Doe"
+              />
             </View>
           </View>
         </CardContent>
         <CardFooter className="flex flex-col items-center justify-center gap-2">
           <Pressable
-            onPress={signIn}
+            onPress={register}
             className={`bg-green-600 ${currentTheme.text} w-full flex justify-center rounded-md p-2`}
-          >
-            <Text
-              className={`${currentTheme.text} text-center text-md font-bold`}
-            >
-              Login
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/(auth)/register")}
-            className={` ${currentTheme.text} bg-zinc-500 w-full flex justify-center rounded-md p-2`}
           >
             <Text
               className={`${currentTheme.text} text-center text-md font-bold`}
