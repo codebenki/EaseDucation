@@ -56,3 +56,13 @@ frontend/app-example
 # generated native folders
 frontend/ios
 frontend/android
+
+
+# Supabase
+supabase/.branches
+supabase/.temp
+
+# dotenvx
+supabase/.env.keys
+supabase/.env.local
+supabase/.env.*.local
