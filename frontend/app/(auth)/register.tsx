@@ -12,7 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserRound } from "lucide-react-native";
 import { useState } from "react";
-import { KeyboardAvoidingView, Pressable, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Pressable, View } from "react-native";
+
+import { authService } from "@/services/auth.service";
+import { useRouter } from "expo-router";
 
 export default function Register() {
   const colorScheme = useColorScheme() ?? "light";
@@ -39,14 +42,22 @@ export default function Register() {
   const [middleName, setMiddleName] = useState("");
   const [lastName, setLastName] = useState("");
 
-  function register() {
-    console.log(email);
-    console.log(password);
-    console.log(firstName);
-    console.log(middleName);
-    console.log(lastName);
+  const router = useRouter();
 
-    // insert supabase query
+  async function register() {
+    try {
+      await authService.register(
+        email,
+        password,
+        firstName,
+        middleName,
+        lastName,
+      );
+      Alert.alert("Success", "Confirmation link has been sent to you email!");
+      router.replace("/(auth)/login");
+    } catch (error: any) {
+      Alert.alert("Error", error.message);
+    }
 
     setEmail("");
     setPassword("");

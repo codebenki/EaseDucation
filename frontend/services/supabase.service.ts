@@ -3,37 +3,31 @@ import * as SecureStore from "expo-secure-store";
 import { createClient } from "@supabase/supabase-js";
 import { Platform } from "react-native";
 
-const ExpoSecureStoreAdapter = {
-  getItem: (key: string) => {
-    // Only attempt to access SecureStore on mobile/native platforms
-    if (
-      Platform.OS === "web" ||
-      Platform.OS === "windows" ||
-      Platform.OS === "macos"
-    ) {
-      return null;
+// Hybrid storage to handle both Web and Mobile
+const AsyncStorageAdapter = {
+  getItem: async (key: string) => {
+    if (Platform.OS === "web") {
+      return typeof window !== "undefined" ? localStorage.getItem(key) : null;
     }
     return SecureStore.getItemAsync(key);
   },
-  setItem: (key: string, value: string) => {
-    if (
-      Platform.OS === "web" ||
-      Platform.OS === "windows" ||
-      Platform.OS === "macos"
-    ) {
-      return;
+  setItem: async (key: string, value: string) => {
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined") {
+        localStorage.setItem(key, value);
+      }
+    } else {
+      await SecureStore.setItemAsync(key, value);
     }
-    SecureStore.setItemAsync(key, value);
   },
-  removeItem: (key: string) => {
-    if (
-      Platform.OS === "web" ||
-      Platform.OS === "windows" ||
-      Platform.OS === "macos"
-    ) {
-      return;
+  removeItem: async (key: string) => {
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(key);
+      }
+    } else {
+      await SecureStore.deleteItemAsync(key);
     }
-    SecureStore.deleteItemAsync(key);
   },
 };
 
@@ -42,7 +36,7 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: ExpoSecureStoreAdapter,
+    storage: AsyncStorageAdapter as any,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,

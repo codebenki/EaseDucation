@@ -113,7 +113,7 @@ export default function Login() {
         </CardContent>
         <CardFooter className="flex flex-col items-center justify-center gap-2">
           <Pressable
-            onPress={() => signIn}
+            onPress={() => signIn(email, password)}
             className={`bg-green-600 ${currentTheme.text} w-full flex justify-center rounded-md p-2`}
           >
             <Text

@@ -9,6 +9,7 @@ import "./global.css";
 import { NAV_THEME } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { supabase } from "@/services/supabase.service";
+import { Session } from "@supabase/supabase-js";
 
 export const unstable_settings = {
   initialRouteName: "(auth)/login",
@@ -18,42 +19,44 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const segments = useSegments();
   const router = useRouter();
+
+  const [session, setSession] = useState<Session | null>(null);
   const [isReady, setIsReady] = useState(false);
 
+  // 1. Handle Auth State Updates
   useEffect(() => {
-    // 1. Initial Session Retrieval
+    // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      handleNavigation(session);
+      setSession(session);
       setIsReady(true);
     });
 
-    // 2. Listen for Auth changes
+    // Listen for changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      handleNavigation(session);
+    } = supabase.auth.onAuthStateChange((_event, payload) => {
+      setSession(payload);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Centralized navigation logic
-  const handleNavigation = (session: any) => {
+  // 2. Handle Navigation Redirection
+  useEffect(() => {
+    if (!isReady) return;
+
     const inAuthGroup = segments[0] === "(auth)";
 
     if (!session && !inAuthGroup) {
-      // Redirect to login if no session and not already in auth group
+      // Not logged in -> force login
       router.replace("/(auth)/login");
     } else if (session && inAuthGroup) {
-      // Redirect to app if session exists and user is in auth group
+      // Logged in -> move to app
       router.replace("/(tabs)/chat");
     }
-  };
+  }, [session, isReady, segments]); // Re-run whenever session or location changes
 
-  if (!isReady) {
-    // Optional: Render a splash screen or null while checking session
-    return null;
-  }
+  if (!isReady) return null;
 
   return (
     <ThemeProvider value={NAV_THEME[colorScheme ?? "light"]}>
