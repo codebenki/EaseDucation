@@ -6,7 +6,13 @@ import { HapticTab } from "@/components/haptic-tab";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
-import { Compass, House, Menu, MessageCircle } from "lucide-react-native";
+import {
+  Compass,
+  House,
+  LogOut,
+  Menu,
+  MessageCircle,
+} from "lucide-react-native";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -72,6 +78,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Compass size={size} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="logout"
+        options={{
+          title: "Logout",
+          tabBarIcon: ({ color, size }) => <LogOut size={size} color={color} />,
         }}
       />
     </Tabs>
