@@ -15,6 +15,8 @@ import { Eye, UserRound } from "lucide-react-native";
 import { useState } from "react";
 import { KeyboardAvoidingView, Pressable, View } from "react-native";
 
+import { supabase } from "@/services/supabase.service";
+
 export default function Login() {
   const colorScheme = useColorScheme() ?? "light";
   const themeClasses = {
@@ -39,10 +41,16 @@ export default function Login() {
   const [secureText, setSecureText] = useState(true);
   const router = useRouter();
 
-  function signIn() {
-    console.log("test");
-    console.log(email);
-    console.log(password);
+  async function signIn(email: any, password: any) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      console.error("Invalid Credentials.");
+      return;
+    }
 
     setEmail("");
     setPassword("");
@@ -105,7 +113,7 @@ export default function Login() {
         </CardContent>
         <CardFooter className="flex flex-col items-center justify-center gap-2">
           <Pressable
-            onPress={signIn}
+            onPress={() => signIn}
             className={`bg-green-600 ${currentTheme.text} w-full flex justify-center rounded-md p-2`}
           >
             <Text
