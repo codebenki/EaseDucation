@@ -4,59 +4,27 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Form, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
-from llama_index.core import (
-    VectorStoreIndex, 
-    Settings, 
-    SimpleDirectoryReader, 
-    StorageContext, 
-    load_index_from_storage
-)
+from llama_index.core import Settings
 from llama_index.llms.groq import Groq
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.readers.docling import DoclingReader
 from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.agent.workflow import FunctionAgent
 from llama_index.core.workflow import Context
 from llama_index.core.llms import ChatMessage
 from tools import create_tools
+from doc_persist import get_index, rebuild_index, STORAGE_DIR, DATA_DIR
+from chat import get_memory, save_message
 
 load_dotenv()
 
-# --- 1. CONFIGURATION ---
-STORAGE_DIR = "./storage"
-DATA_DIR = "./data"
-
 Settings.llm = Groq(
-    model="llama-3.3-70b-versatile", 
+    model="openai/gpt-oss-120b", 
     api_key=os.getenv("GROQ_API_KEY"),
 )
 Settings.embed_model = HuggingFaceEmbedding(
     model_name="BAAI/bge-small-en-v1.5", 
     device="cpu"
 )
-
-memory = ChatMemoryBuffer.from_defaults(token_limit=4000)
-
-# --- 2. PERSISTENCE LOGIC ---
-def get_index():
-    if os.path.exists(STORAGE_DIR) and os.listdir(STORAGE_DIR):
-        storage_context = StorageContext.from_defaults(persist_dir=STORAGE_DIR)
-        return load_index_from_storage(storage_context)
-    return None
-
-def rebuild_index(file_path):
-    """Indexes a single file and persists it."""
-    reader = SimpleDirectoryReader(input_files=[file_path], file_extractor={
-        ".pdf": DoclingReader(),
-        ".docx": DoclingReader(),
-        ".pptx": DoclingReader(),
-        ".html": DoclingReader()
-    })
-    
-    documents = reader.load_data()
-    index = VectorStoreIndex.from_documents(documents)
-    index.storage_context.persist(persist_dir=STORAGE_DIR)
-    return index
 
 # --- 3. API IMPLEMENTATION ---
 app = FastAPI()
@@ -72,8 +40,13 @@ app.add_middleware(
 @app.post("/chat")
 async def chat(
     message: str = Form(...),
-    file: UploadFile = File(None)
+    file: UploadFile = File(None),
 ):
+    # test on postman. create dummy thread_id
+    thread_id = "c71657c7-5782-4512-8212-b78397c44523"
+    history = await get_memory(thread_id)
+    memory = ChatMemoryBuffer.from_defaults(chat_history=history)
+
     user_intent = await Settings.llm.acomplete(f"""
         -----------------------------
         Rules:
@@ -122,10 +95,15 @@ async def chat(
         response = await Settings.llm.achat(
             messages = [
                 ChatMessage(role='system', content=chat_prompt),
+                *history,
                 ChatMessage(role='user', content=message)
             ]
         )
-        return {'answer': str(response.message.content)}
+
+        answer = str(response.message.content)
+        await save_message(thread_id, 'assistant', answer)
+
+        return {'answer': answer}
 
     elif 'TASK' in str(user_intent).upper():
         tools = create_tools(index)
@@ -133,10 +111,11 @@ async def chat(
         task_prompt = chat_prompt + """
         AGENT TASK INSTRUCTIONS:
         1. If the user wants a quiz, read the context provided above.
-        2. Create 5 multiple-choice questions based ONLY on that context.
-        3. Format the data into a JSON structure with 'title' and 'questions'.
-        4. Call 'save_quiz' with this JSON data.
-        5. DO NOT just list the questions in chat; you MUST call the tool to save them.
+        2. Create 5 or the number given by the user, multiple-choice questions based ONLY on that context.
+        3. Do not include questions outside the context like: 'what is the path of the document?'.
+        4. Format the data into a JSON structure with 'title' and 'questions'.
+        5. Call 'save_quiz' with this JSON data.
+        6. DO NOT just list the questions in chat; you MUST call the tool to save them.
         """
 
         agent = FunctionAgent(
@@ -147,20 +126,14 @@ async def chat(
         )
         ctx = Context(agent)
 
-        # STEP 4: Run the Agent
+        await save_message(thread_id, 'user', message)
         response = await agent.run(user_msg=message, ctx=ctx, memory=memory)
+        answer = str(response)
 
-        return {
-            'answer': str(response),
-            'has_context': bool(document_context)
-        }
+        await save_message(thread_id, 'assistant', answer)
 
-@app.post("/reset")
-async def reset_memory():
-    memory.reset()
-    if os.path.exists(STORAGE_DIR):
-        shutil.rmtree(STORAGE_DIR)
-    return {"status": "Reset successful"}
+        return {'answer': answer}
+    
 
 if __name__ == "__main__":
     import uvicorn

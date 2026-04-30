@@ -1,15 +1,11 @@
-import os
 from dotenv import load_dotenv
-from supabase import create_client, Client
+from use_supabase import use_supabase
 from llama_index.core.tools import FunctionTool, QueryEngineTool, ToolMetadata
 from quiz import QuizSchema
 
 load_dotenv()
 
-# Initialize Supabase
-url: str = os.getenv("SUPABASE_URL")
-key: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-supabase: Client = create_client(url, key)
+supabase = use_supabase()
 
 def save_quiz_to_db(quiz_data: dict):
     """
