@@ -1,7 +1,7 @@
 import React from "react";
 import { ScrollView, Text, View } from "react-native";
 
-import { ChatMessage } from "../../app/(tabs)/chat";
+import { ChatMessage } from "../../app/(drawer)/(tabs)/chat";
 
 interface MessageListProps {
   messages: ChatMessage[];
