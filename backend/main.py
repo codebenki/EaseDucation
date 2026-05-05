@@ -1,5 +1,4 @@
 import os
-import shutil
 from dotenv import load_dotenv
 from fastapi import FastAPI, Form, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,13 +6,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from llama_index.core import Settings
 from llama_index.llms.groq import Groq
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.core.memory import ChatMemoryBuffer
 from llama_index.core.agent.workflow import FunctionAgent
 from llama_index.core.llms import ChatMessage
 from llama_index.core.workflow import Context
+
 from tools import create_tools
-from doc_persist import get_index, rebuild_index, DATA_DIR
-from chat import get_memory, save_message, create_thread
+from chat import save_message
+from chat_init import initialize_chat_session
+
 
 load_dotenv()
 
@@ -23,7 +23,7 @@ Settings.llm = Groq(
     api_key=os.getenv("GROQ_API_KEY"),
 )
 Settings.embed_model = HuggingFaceEmbedding(
-    model_name="BAAI/bge-small-en-v1.5", 
+    model_name="Qwen/Qwen3-Embedding-0.6B", 
     device="cpu"
 )
 
@@ -36,49 +36,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# --- 2. THE "DRY" ORCHESTRATOR ---
-
-async def initialize_chat_session(message: str, thread_id: str, profiles_id: str, file: UploadFile):
-    """
-    Handles thread management, history loading, message persistence, 
-    and document RAG context in one go.
-    """
-    # A. Thread & History Management
-    if not thread_id or thread_id == "null":
-        thread_id = await create_thread(message, profiles_id)
-    
-    history = await get_memory(thread_id)
-    await save_message(thread_id, 'user', message, profiles_id)
-
-    # B. Document Parsing & Indexing
-    if file:
-        if not os.path.exists(DATA_DIR): os.makedirs(DATA_DIR)
-        file_path = os.path.join(DATA_DIR, file.filename)
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        index = rebuild_index(file_path)
-        os.remove(file_path)
-    else:
-        index = get_index()
-
-    # C. Retrieval (Context Generation)
-    document_context = ""
-    if index:
-        query_engine = index.as_query_engine(similarity_top_k=3)
-        retrieval_response = query_engine.query(message)
-        document_context = str(retrieval_response)
-    
-    # D. Prepare Memory Object
-    memory = ChatMemoryBuffer.from_defaults(chat_history=history)
-    
-    return {
-        "thread_id": thread_id,
-        "history": history,
-        "index": index,
-        "document_context": document_context,
-        "memory": memory
-    }
 
 # --- 3. ENDPOINTS ---
 

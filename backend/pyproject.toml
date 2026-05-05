@@ -16,6 +16,7 @@ dependencies = [
     "llama-index-node-parser-docling>=0.4.2",
     "llama-index-readers-docling>=0.4.2",
     "llama-index-readers-file>=0.6.0",
+    "llama-index-vector-stores-supabase>=0.5.0",
     "python-dotenv>=1.2.2",
     "python-multipart>=0.0.26",
     "supabase>=2.29.0",
