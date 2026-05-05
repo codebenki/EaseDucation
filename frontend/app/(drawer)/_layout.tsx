@@ -3,13 +3,7 @@ import { View, Text, FlatList, Pressable } from "react-native";
 import { Drawer } from "expo-router/drawer";
 import { useRouter, usePathname, Href } from "expo-router";
 import { supabase } from "../../services/supabase.service";
-import {
-  House,
-  MessageCircle,
-  Compass,
-  LogOut,
-  Clock,
-} from "lucide-react-native";
+import { MessageCircle, LogOut, Clock } from "lucide-react-native";
 
 interface Thread {
   id: string;

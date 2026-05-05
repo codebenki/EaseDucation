@@ -3,6 +3,7 @@ import Chat from "../chat";
 import { useEffect, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { Loader } from "lucide-react-native";
+import { View } from "react-native";
 
 interface Message {
   id: string;
@@ -30,7 +31,12 @@ export default function Thread() {
     if (id) fetchThreads();
   }, [id]);
 
-  if (isLoading) return <Loader size={200} />;
+  if (isLoading)
+    return (
+      <View className={`flex items-center justify-center`}>
+        <Loader size={60} />
+      </View>
+    );
 
   return (
     <Chat
