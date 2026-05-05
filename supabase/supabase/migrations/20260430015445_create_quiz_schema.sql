@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS questionnaires (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     created_at TIMESTAMPTZ DEFAULT now(),
     title TEXT NOT NULL,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE -- Optional: Link to user
+    profiles_id UUID REFERENCES profiles(id) ON DELETE CASCADE -- Optional: Link to user
 );
 
 -- 2. Create the Questions table (The Details)
@@ -25,3 +25,12 @@ ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
 
 -- 4. Create Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_questions_questionnaire_id ON questions(questionnaire_id);
+
+-- 5. Create Policies
+create policy "Enable read access for all users"
+on public.questionnaires
+for select
+to authenticated
+using (
+  auth.uid() = profiles_id
+);
