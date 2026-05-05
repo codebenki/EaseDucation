@@ -42,3 +42,22 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: false,
   },
 });
+
+export const getProfileId = async () => {
+  // 1. Get the authenticated user
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  // 2. Look up the profile record linked to this auth user
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", user?.id)
+    .single();
+  if (error) throw error;
+
+  return profile?.id;
+};

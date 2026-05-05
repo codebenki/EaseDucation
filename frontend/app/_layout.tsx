@@ -52,7 +52,7 @@ export default function RootLayout() {
       router.replace("/(auth)/login");
     } else if (session && inAuthGroup) {
       // Logged in -> move to app
-      router.replace("/(tabs)/chat");
+      router.replace("/(drawer)/(tabs)/chat");
     }
   }, [session, isReady, segments]); // Re-run whenever session or location changes
 
@@ -62,11 +62,7 @@ export default function RootLayout() {
     <ThemeProvider value={NAV_THEME[colorScheme ?? "light"]}>
       <Stack>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="modal"
-          options={{ presentation: "modal", title: "Modal" }}
-        />
+        <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
       <PortalHost />

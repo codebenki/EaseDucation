@@ -55,7 +55,7 @@ export default function Login() {
     setEmail("");
     setPassword("");
 
-    router.replace("/(tabs)/chat");
+    router.replace("/(drawer)/(tabs)/chat");
   }
 
   return (

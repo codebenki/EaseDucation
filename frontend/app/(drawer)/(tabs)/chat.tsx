@@ -1,11 +1,13 @@
 import { ChatInput } from "@/components/chat/chat-input";
 import { MessageList } from "@/components/chat/message-list";
 import { ThemedView } from "@/components/themed-view";
-import { Input } from "@/components/ui/input";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { getProfileId } from "@/services/supabase.service";
+import { sendChatMessage } from "@/services/chat-service"; // Import the service
 import { useHeaderHeight } from "@react-navigation/elements";
-import React, { useState } from "react";
-import { KeyboardAvoidingView, Platform, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export type ChatMessage = {
@@ -15,13 +17,21 @@ export type ChatMessage = {
   fileName?: string;
 };
 
-export default function Chat() {
+interface ChatProps {
+  initialMessages?: ChatMessage[];
+  threadId?: string;
+}
+
+export default function Chat({ initialMessages = [], threadId }: ChatProps) {
+  const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const serverIp = new URL(url ?? "").hostname;
   const colorScheme = useColorScheme() ?? "light";
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const router = useRouter();
+
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [isLoading, setIsLoading] = useState(false);
-  const [serverIp, setServerIp] = useState("localhost");
 
   const themeClasses = {
     light: {
@@ -51,6 +61,7 @@ export default function Chat() {
     message: string;
     fileName?: string;
   }) {
+    // 1. UI Update: Add user message
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: "user",
@@ -62,42 +73,29 @@ export default function Chat() {
     setIsLoading(true);
 
     try {
-      const url = "http://" + serverIp + ":8010/chat";
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { Accept: "application/json" },
-        body: formData,
+      // 2. Call the Service
+      const pId = await getProfileId();
+      const result = await sendChatMessage({
+        serverIp,
+        formData,
+        profilesId: pId,
+        threadId,
       });
-      const responseText = await response.text();
-      let responseData: {
-        answer?: string;
-        message?: string;
-        detail?: string;
-      } | null = null;
 
-      if (responseText) {
-        try {
-          responseData = JSON.parse(responseText);
-        } catch {
-          responseData = { answer: responseText };
-        }
-      }
-
-      if (!response.ok) {
-        throw new Error(
-          responseData?.message ||
-            responseData?.detail ||
-            `Request failed with status ${response.status}`,
-        );
-      }
-
+      // 3. UI Update: Add AI message
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: responseData?.answer ?? "No answer returned from the server.",
+        content: result.answer,
       };
 
       setMessages((prev) => [...prev, aiMessage]);
+
+      // 4. Navigation Logic
+      if (threadId == undefined) {
+        setMessages([]);
+        router.push(`/(drawer)/(tabs)/thread/${result.thread_id}` as any);
+      }
     } catch (error) {
       console.error("Chat Error:", error);
     } finally {
@@ -107,24 +105,6 @@ export default function Chat() {
 
   return (
     <ThemedView className={`flex-1 ${currentTheme.container}`}>
-      <View className={`border-b px-4 pb-3 pt-3 ${currentTheme.border}`}>
-        <Text
-          className={`mb-2 text-xs uppercase tracking-[1px] opacity-60 ${currentTheme.text}`}
-        >
-          Server IP
-        </Text>
-        <Input
-          value={serverIp}
-          onChangeText={setServerIp}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType={Platform.OS === "ios" ? "url" : "default"}
-          placeholder="192.168.1.10:8010"
-          className={`rounded-2xl px-4 py-3 ${currentTheme.inputBg} ${currentTheme.text}`}
-          placeholderTextColor={colorScheme === "dark" ? "#71717a" : "#a1a1aa"}
-        />
-      </View>
-
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
