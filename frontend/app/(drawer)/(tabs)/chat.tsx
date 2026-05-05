@@ -6,7 +6,7 @@ import { getProfileId } from "@/services/supabase.service";
 import { sendChatMessage } from "@/services/chat-service"; // Import the service
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -92,10 +92,10 @@ export default function Chat({ initialMessages = [], threadId }: ChatProps) {
       setMessages((prev) => [...prev, aiMessage]);
 
       // 4. Navigation Logic
-      if (result.thread_id) {
+      if (threadId == undefined) {
+        setMessages([]);
         router.push(`/(drawer)/(tabs)/thread/${result.thread_id}` as any);
       }
-      setMessages([]);
     } catch (error) {
       console.error("Chat Error:", error);
     } finally {
