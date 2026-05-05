@@ -30,7 +30,7 @@ function CustomSidebar(props: any) {
       if (data) setThreads(data as Thread[]);
     };
     fetchThreads();
-  }, []);
+  }, [pathname]);
 
   /**
    * Static Navigation Item
@@ -69,7 +69,6 @@ function CustomSidebar(props: any) {
     <View style={{ flex: 1, paddingTop: 60, backgroundColor: "#121212" }}>
       {/* 1. Main Navigation */}
       <View className="mb-4">
-        <NavItem label="Home" icon={House} route="/(drawer)/(tabs)" />
         <NavItem
           label="New Chat"
           icon={MessageCircle}

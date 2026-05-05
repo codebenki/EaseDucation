@@ -3,8 +3,10 @@ import { MessageList } from "@/components/chat/message-list";
 import { ThemedView } from "@/components/themed-view";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { getProfileId } from "@/services/supabase.service";
+import { sendChatMessage } from "@/services/chat-service"; // Import the service
 import { useHeaderHeight } from "@react-navigation/elements";
-import React, { useState, useEffect } from "react";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
 import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -15,7 +17,6 @@ export type ChatMessage = {
   fileName?: string;
 };
 
-// Define proper types for the props
 interface ChatProps {
   initialMessages?: ChatMessage[];
   threadId?: string;
@@ -27,13 +28,10 @@ export default function Chat({ initialMessages = [], threadId }: ChatProps) {
   const colorScheme = useColorScheme() ?? "light";
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
-  // Initialize state with props coming from id.tsx
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [isLoading, setIsLoading] = useState(false);
-  const profilesId = getProfileId();
-
-  console.log(messages);
 
   const themeClasses = {
     light: {
@@ -63,6 +61,7 @@ export default function Chat({ initialMessages = [], threadId }: ChatProps) {
     message: string;
     fileName?: string;
   }) {
+    // 1. UI Update: Add user message
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: "user",
@@ -74,42 +73,29 @@ export default function Chat({ initialMessages = [], threadId }: ChatProps) {
     setIsLoading(true);
 
     try {
-      const url = "http://" + serverIp + ":8010/chat";
-
-      // Append Profile and Thread context
-      formData.append("profiles_id", await profilesId);
-      if (threadId) {
-        formData.append("thread_id", threadId);
-      }
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { Accept: "application/json" },
-        body: formData,
+      // 2. Call the Service
+      const pId = await getProfileId();
+      const result = await sendChatMessage({
+        serverIp,
+        formData,
+        profilesId: pId,
+        threadId,
       });
 
-      const responseText = await response.text();
-      let responseData: any = null;
-
-      if (responseText) {
-        try {
-          responseData = JSON.parse(responseText);
-        } catch {
-          responseData = { answer: responseText };
-        }
-      }
-
-      if (!response.ok) {
-        throw new Error(responseData?.message || "Request failed");
-      }
-
+      // 3. UI Update: Add AI message
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: responseData?.answer ?? "No answer returned from the server.",
+        content: result.answer,
       };
 
       setMessages((prev) => [...prev, aiMessage]);
+
+      // 4. Navigation Logic
+      if (result.thread_id) {
+        router.push(`/(drawer)/(tabs)/thread/${result.thread_id}` as any);
+      }
+      setMessages([]);
     } catch (error) {
       console.error("Chat Error:", error);
     } finally {

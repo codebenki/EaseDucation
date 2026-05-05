@@ -1,7 +1,8 @@
 import { supabase } from "@/services/supabase.service";
 import Chat from "../chat";
 import { useEffect, useState } from "react";
-import { usePathname } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { Loader } from "lucide-react-native";
 
 interface Message {
   id: string;
@@ -10,25 +11,32 @@ interface Message {
 }
 
 export default function Thread() {
+  const { id } = useLocalSearchParams();
   const [messages, setMessages] = useState<Message[]>([]);
-  const thread_id = usePathname().split("/");
+  const [isLoading, setIsLoading] = useState(false);
+
   useEffect(() => {
     const fetchThreads = async () => {
-      const { data } = await supabase
+      setIsLoading(true);
+      const { data, error } = await supabase
         .from("chat_messages")
         .select("id, role, content")
-        .eq("thread_id", thread_id[2])
+        .eq("thread_id", id)
         .order("created_at", { ascending: true });
+      if (error) throw error;
       if (data) setMessages(data as Message[]);
+      setIsLoading(false);
     };
-    fetchThreads();
-  }, []);
-  // message doesnt render when switching to other thread id
+    if (id) fetchThreads();
+  }, [id]);
+
+  if (isLoading) return <Loader size={200} />;
+
   return (
     <Chat
-      key={thread_id[2]}
+      key={id as string}
       initialMessages={messages as []}
-      threadId={thread_id[2]}
+      threadId={id as string}
     />
   );
 }
