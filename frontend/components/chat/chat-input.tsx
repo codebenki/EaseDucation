@@ -18,9 +18,15 @@ interface ChatInputProps {
     message: string;
     fileName?: string;
   }) => void;
+  onChange: (text: string) => void;
 }
 
-export function ChatInput({ theme, colorScheme, onSend }: ChatInputProps) {
+export function ChatInput({
+  theme,
+  colorScheme,
+  onSend,
+  onChange,
+}: ChatInputProps) {
   const [message, setMessage] = useState("");
   const [inputHeight, setInputHeight] = useState(40);
   const [attachedFile, setAttachedFile] =
@@ -29,6 +35,15 @@ export function ChatInput({ theme, colorScheme, onSend }: ChatInputProps) {
 
   type WebDocumentPickerAsset = DocumentPicker.DocumentPickerAsset & {
     file?: File;
+  };
+
+  const handleEndpointChange = (text: string) => {
+    setMessage(text);
+    if (text.toLowerCase().startsWith("/quiz")) {
+      onChange("/quiz");
+    } else {
+      onChange("/chat");
+    }
   };
 
   const handlePickDocument = async () => {
@@ -122,7 +137,7 @@ export function ChatInput({ theme, colorScheme, onSend }: ChatInputProps) {
         <Input
           ref={inputRef}
           value={message}
-          onChangeText={setMessage}
+          onChangeText={handleEndpointChange}
           placeholder={attachedFile ? "Add a message..." : "Chat"}
           multiline
           blurOnSubmit={false}

@@ -6,14 +6,15 @@ import { getProfileId } from "@/services/supabase.service";
 import { sendChatMessage } from "@/services/chat-service"; // Import the service
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, View } from "react-native";
+import React, { useState } from "react";
+import { KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   content: string;
+  quiz_id?: string;
   fileName?: string;
 };
 
@@ -32,6 +33,11 @@ export default function Chat({ initialMessages = [], threadId }: ChatProps) {
 
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [isLoading, setIsLoading] = useState(false);
+  const [endpoint, setEndpoint] = useState("/chat");
+
+  function handleEndpoint(text: string) {
+    setEndpoint(text);
+  }
 
   const themeClasses = {
     light: {
@@ -52,6 +58,10 @@ export default function Chat({ initialMessages = [], threadId }: ChatProps) {
 
   const currentTheme = themeClasses[colorScheme];
 
+  async function handleQuizPress(quiz_id: string) {
+    console.log(quiz_id);
+  }
+
   async function handleSendMessage({
     formData,
     message,
@@ -61,11 +71,21 @@ export default function Chat({ initialMessages = [], threadId }: ChatProps) {
     message: string;
     fileName?: string;
   }) {
+    const isQuizMode = message.toLowerCase().startsWith("/quiz");
+    let cleanMessage = isQuizMode
+      ? message.replace(/\/quiz\s*/i, "").trim()
+      : message;
+
+    if (isQuizMode && !cleanMessage) {
+      cleanMessage = "Generate a quiz based on the document.";
+    }
+    formData.set("message", cleanMessage);
+
     // 1. UI Update: Add user message
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: "user",
-      content: message,
+      content: cleanMessage,
       fileName: fileName,
     };
 
@@ -80,6 +100,7 @@ export default function Chat({ initialMessages = [], threadId }: ChatProps) {
         formData,
         profilesId: pId,
         threadId,
+        endpoint,
       });
 
       // 3. UI Update: Add AI message
@@ -88,6 +109,18 @@ export default function Chat({ initialMessages = [], threadId }: ChatProps) {
         role: "assistant",
         content: result.answer,
       };
+
+      if (result.quiz_id) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            content: result.answer,
+            quiz_id: result.quiz_id,
+          },
+        ]);
+      }
 
       setMessages((prev) => [...prev, aiMessage]);
 
@@ -117,6 +150,7 @@ export default function Chat({ initialMessages = [], threadId }: ChatProps) {
           isLoading={isLoading}
           colorScheme={colorScheme}
           theme={currentTheme}
+          onQuizPress={handleQuizPress}
         />
 
         <View style={{ paddingBottom: Math.max(insets.bottom, 8) }}>
@@ -124,6 +158,7 @@ export default function Chat({ initialMessages = [], threadId }: ChatProps) {
             theme={currentTheme}
             colorScheme={colorScheme}
             onSend={handleSendMessage}
+            onChange={(e) => handleEndpoint(e)}
           />
         </View>
       </KeyboardAvoidingView>
