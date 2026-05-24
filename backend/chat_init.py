@@ -8,6 +8,8 @@ from fastapi import UploadFile
 
 DATA_DIR = "./data"
 async def initialize_chat_session(message: str, thread_id: str, profiles_id: str, file: UploadFile):
+    file_name = file.filename if file else None
+
     if not thread_id or thread_id == "null":
         thread_id = await create_thread(message, profiles_id)
     
@@ -30,10 +32,13 @@ async def initialize_chat_session(message: str, thread_id: str, profiles_id: str
     # B. Retrieval with User-Specific Filtering
     document_context = ""
     if index:
+        filters_list = [ExactMatchFilter(key="profiles_id", value=profiles_id)]
+
+        if file_name:
+            filters_list.append(ExactMatchFilter(key="file_name", value=file_name))
+        
         # Create a filter so we only search vectors belonging to THIS user
-        filters = MetadataFilters(filters=[
-            ExactMatchFilter(key="profiles_id", value=profiles_id)
-        ])
+        filters = MetadataFilters(filters=filters_list)
         
         query_engine = index.as_query_engine(
             similarity_top_k=3,
