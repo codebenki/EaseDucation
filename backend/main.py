@@ -154,6 +154,7 @@ async def quiz(
     return {
         'quiz_id': quiz_id, 
         'thread_id': session['thread_id'],
+        'answer': "Quiz Generated!"
     }
 
 if __name__ == "__main__":
