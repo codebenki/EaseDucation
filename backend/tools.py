@@ -1,9 +1,6 @@
-from dotenv import load_dotenv
 from use_supabase import use_supabase
 from llama_index.core.tools import FunctionTool, QueryEngineTool, ToolMetadata
 from quiz import QuizSchema
-
-load_dotenv()
 
 supabase = use_supabase()
 
@@ -13,9 +10,12 @@ def save_quiz_to_db(quiz_data: dict):
     Expects 'title' and a list of 'questions'.
     """
     try:
-        # 1. Validate the dictionary against Pydantic
-        quiz = QuizSchema(**quiz_data)
         
+        if isinstance(quiz_data, dict):
+            quiz = QuizSchema(**quiz_data)
+        else:
+            quiz = quiz_data
+
         # 2. Insert into 'questionnaires' table
         header_resp = supabase.table("questionnaires").insert({
             "title": quiz.title
@@ -38,16 +38,13 @@ def save_quiz_to_db(quiz_data: dict):
         # 4. Bulk insert into 'questions' table
         supabase.table("questions").insert(questions_to_insert).execute()
         
-        print(f"DB SUCCESS: Saved quiz '{quiz.title}' with ID {quiz_id}")
-        return f"Successfully saved the quiz '{quiz.title}' to the database. Quiz ID: {quiz_id}"
-
+        return {"quiz_id": quiz_id}
     except Exception as e:
-        print(f"DB ERROR: {str(e)}")
-        return f"Error saving quiz to database: {str(e)}"
+        return f"ERROR: The save failed. {str(e)}"
 
 # This combines both tools for the Agent
 def create_tools(index):
-    query_engine = index.as_query_engine(similarity_top_k=3)
+    query_engine = index.as_query_engine(similarity_top_k=5)
     
     query_tool = QueryEngineTool(
         query_engine=query_engine,
@@ -57,10 +54,10 @@ def create_tools(index):
         )
     )
 
-    save_tool = FunctionTool.from_defaults(
+    save_quiz = FunctionTool.from_defaults(
         fn=save_quiz_to_db,
         name="save_quiz",
         description="Call this to save a quiz. Input is a JSON with 'title' and 'questions' array."
     )
     
-    return [query_tool, save_tool]
+    return [query_tool, save_quiz]

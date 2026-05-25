@@ -21,6 +21,12 @@ export default function TabLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="quiz/[id]"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

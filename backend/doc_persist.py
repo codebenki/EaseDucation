@@ -48,11 +48,12 @@ def rebuild_index(file_path: str, profiles_id: str):
     )
     
     documents = reader.load_data()
-    
+    file_name = os.path.basename(file_path)
     # 3. Inject profiles_id into metadata for every chunk
     for doc in documents:
         doc.metadata["profiles_id"] = str(profiles_id)
         doc.metadata["file_path"] = file_path
+        doc.metadata['file_name'] = file_name
 
     # 4. Create index (this triggers the embedding and upload to Supabase)
     # This does NOT save locally because no persist_dir is provided.

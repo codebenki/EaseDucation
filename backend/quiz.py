@@ -1,5 +1,8 @@
 from pydantic import BaseModel, Field
 from typing import List
+from use_supabase import use_supabase
+
+supabase = use_supabase()
 
 class QuizQuestion(BaseModel):
     # id: str = Field(..., description="Unique ID for the question")
@@ -11,3 +14,8 @@ class QuizQuestion(BaseModel):
 class QuizSchema(BaseModel):
     title: str = Field(..., description="Subject of the quiz")
     questions: List[QuizQuestion] = Field(..., description="List of 5 questions")
+
+async def update_quiz_prof_id(quiz_id: str, profile_id: str):
+    supabase.table("questionnaires").update({
+        "profiles_id": profile_id
+    }).eq("id", quiz_id).execute()

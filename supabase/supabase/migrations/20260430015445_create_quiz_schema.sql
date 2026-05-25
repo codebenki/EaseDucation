@@ -34,3 +34,15 @@ to authenticated
 using (
   auth.uid() = profiles_id
 );
+create policy "Enable read access for all users"
+on public.questions
+for select
+to authenticated
+using(
+    exists(
+        select 1
+        from public.questionnaires q
+        where q.id = questions.questionnaire_id
+            and q.profiles_id = auth.uid()
+    )
+)

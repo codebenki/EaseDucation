@@ -1,7 +1,6 @@
-import { ChatMessage } from "@/app/(drawer)/(tabs)/chat";
-
 interface ChatResponse {
   answer: string;
+  quiz_id: string;
   thread_id: string;
 }
 
@@ -10,6 +9,7 @@ interface SendMessageParams {
   formData: FormData;
   profilesId: string;
   threadId?: string;
+  endpoint: string;
 }
 
 export async function sendChatMessage({
@@ -17,8 +17,9 @@ export async function sendChatMessage({
   formData,
   profilesId,
   threadId,
+  endpoint,
 }: SendMessageParams): Promise<ChatResponse> {
-  const url = `http://${serverIp}:8010/chat`;
+  const url = `http://${serverIp}:8010${endpoint}`;
 
   // Append context
   formData.append("profiles_id", profilesId);
@@ -49,6 +50,7 @@ export async function sendChatMessage({
 
   return {
     answer: responseData?.answer ?? "No answer returned from the server.",
+    quiz_id: responseData?.quiz_id,
     thread_id: responseData?.thread_id,
   };
 }
