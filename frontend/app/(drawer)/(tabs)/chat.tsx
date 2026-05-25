@@ -59,7 +59,7 @@ export default function Chat({ initialMessages = [], threadId }: ChatProps) {
   const currentTheme = themeClasses[colorScheme];
 
   async function handleQuizPress(quiz_id: string) {
-    console.log(quiz_id);
+    router.push(`/(drawer)/(tabs)/quiz/${quiz_id}` as any);
   }
 
   async function handleSendMessage({
@@ -137,7 +137,7 @@ export default function Chat({ initialMessages = [], threadId }: ChatProps) {
   }
 
   return (
-    <ThemedView className={`flex-1 ${currentTheme.container}`}>
+    <View className={`flex-1 ${currentTheme.container}`}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
@@ -162,6 +162,6 @@ export default function Chat({ initialMessages = [], threadId }: ChatProps) {
           />
         </View>
       </KeyboardAvoidingView>
-    </ThemedView>
+    </View>
   );
 }
